@@ -1,0 +1,36 @@
+=== Install ===
+
+Add to INSTALLED_APPS:
+	'gatekeeper'
+	
+Be sure to place gatekeeper above any application which contains models that will be moderated.
+
+=== Middleware ===
+
+Add to MIDDLEWARE_CLASSES:
+
+gatekeeper.middleware.GatekeeperMiddleware
+
+=== Configure ===
+
+from django.db import models
+import gatekeeper
+
+class MyModel(models.Model):
+	pass
+
+gatekeeper.register(MyModel)
+
+=== Admin ===
+
+Include the following in urls.py BEFORE the default admin:
+
+url(r'^admin/gatekeeper/', include('gatekeeper.urls')),
+
+=== Use ===
+
+from myapp.models import MyModel
+import gatekeeper
+
+def index(request):
+	my_models = gatekeeper.approved(MyModel.objects.get(creator=request.user))

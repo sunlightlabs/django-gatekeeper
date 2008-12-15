@@ -1,0 +1,8 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+<ul class="object-tools">
+	<li><a href="{% url gatekeeper_moderate_list %}">Gatekeeper Moderation</a></li>
+</ul>
+{{ block.super }}
+{% endblock %}
