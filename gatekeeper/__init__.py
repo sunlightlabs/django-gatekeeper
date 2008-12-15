@@ -23,7 +23,7 @@ def _get_automod_user():
         from django.contrib.sites.models import Site
         site = Site.objects.get(id=settings.SITE_ID)
         automod_user = User.objects.create_user(
-            'gatekeeper_automod', 'gatekeeper_automod@%s' % site.domain, settings.SECRET_KEY)
+            'gatekeeper_automod', 'gatekeeper_automod@%s' % site.domain)
         automod_user.save()
         return automod_user
 
