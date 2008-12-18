@@ -1,3 +1,9 @@
+
+__author__ = "Jeremy Carbaugh (jcarbaugh@sunlightfoundation.com)"
+__version__ = "0.1"
+__copyright__ = "Copyright (c) 2008 Sunlight Labs"
+__license__ = "BSD"
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
@@ -13,7 +19,6 @@ ENABLE_AUTOMODERATION = getattr(settings, "GATEKEEPER_ENABLE_AUTOMODERATION", Fa
 DEFAULT_STATUS = getattr(settings, "GATEKEEPER_DEFAULT_STATUS", 0)
 MODERATOR_LIST = getattr(settings, "GATEKEEPER_MODERATOR_LIST", [])
 
-AUTOMOD_USER = None
 post_moderation = Signal(providing_args=["instance"])
 
 def _get_automod_user():
