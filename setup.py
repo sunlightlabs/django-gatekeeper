@@ -5,7 +5,9 @@ long_description = open('README.rst').read()
 setup(
     name='django-gatekeeper',
     version="0.1",
+    package_dir={'gatekeeper': 'gatekeeper'},
     packages=['gatekeeper'],
+    package_data={'gatekeeper': ['templates/admin/gatekeeper/*.html']},
     description='Django object moderation',
     author='Jeremy Carbaugh',
     author_email='jcarbaugh@sunlightfoundation.com',
