@@ -1,7 +1,7 @@
 from distutils.core import setup
 from gatekeeper import __version__
 
-long_description = open('README').read()
+long_description = open('README.rst').read()
 
 setup(
     name='django-gatekeeper',
