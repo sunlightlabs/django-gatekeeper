@@ -1,11 +1,10 @@
 from distutils.core import setup
-from gatekeeper import __version__
 
 long_description = open('README.rst').read()
 
 setup(
     name='django-gatekeeper',
-    version=__version__,
+    version="0.1",
     packages=['gatekeeper'],
     description='Django object moderation',
     author='Jeremy Carbaugh',
