@@ -11,9 +11,9 @@ Writen by Jeremy Carbaugh <jcarbaugh@sunlightfoundation.com>
 
 All code is under a BSD-style license, see LICENSE for details.
 
-Homepage: http://pypi.python.org/pypi/python-sunlightapi/
+Homepage: http://pypi.python.org/pypi/django-gatekeeper/
 
-Source: http://github.com/sunlightlabs/python-sunlightapi/
+Source: http://github.com/sunlightlabs/django-gatekeeper/
 
 
 Requirements
