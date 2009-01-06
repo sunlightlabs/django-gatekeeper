@@ -50,6 +50,10 @@ Be sure to place gatekeeper above any application which contains models that wil
 Add to MIDDLEWARE_CLASSES:
 
     ``gatekeeper.middleware.GatekeeperMiddleware``
+
+Add to urls.py:
+
+    url(r'^admin/gatekeeper/', include('gatekeeper.urls')),
     
     
 Register Models
