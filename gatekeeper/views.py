@@ -10,17 +10,17 @@ import gatekeeper
 @staff_member_required
 def moderate(request):
     if request.method == 'POST':
-        status = 0
+        status = gatekeeper.PENDING
         object_ids = request.POST.getlist('objects')
         if "_deny" in request.POST:
-            status = -1
+            status = gatekeeper.REJECTED
         elif "_approve" in request.POST:
-            status = 1
+            status = gatekeeper.APPROVED
         if status and object_ids:
             for obj_id in object_ids:
-                if status == 1:
+                if status == gatekeeper.APPROVED:
                     ModeratedObject.objects.get(pk=obj_id).approve(request.user)
-                elif status == -1:
+                elif status == gatekeeper.REJECTED:
                     ModeratedObject.objects.get(pk=obj_id).reject(request.user)
 
     return HttpResponseRedirect(reverse('gatekeeper_moderate_list'))
@@ -32,7 +32,7 @@ def moderate_list(request, app_label=None, model=None):
     if content_type:
         content_type = ContentType.objects.get(pk=content_type)
     
-    pending = ModeratedObject.objects.filter(status=0)
+    pending = ModeratedObject.objects.filter(status=gatekeeper.PENDING)
     if content_type:
         pending = pending.filter(content_type=content_type)
         

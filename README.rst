@@ -77,11 +77,40 @@ Include the following in urls.py BEFORE the default admin:
 Filtering Moderated Models
 --------------------------
 
-    >>> from myapp.models import MyModel
-    >>> import gatekeeper
-    >>> def index(request):
-    ...     my_models = gatekeeper.approved(MyModel.objects.get(creator=request.user))
+Four filter methods are provided to filter instances by moderation status.
+
+    ``gatekeeper.approved(qs_or_obj)     # approved by moderator``
+    ``gatekeeper.pending(qs_or_obj)      # pending in moderation queue``
+    ``gatekeeper.rejected(qs_or_obj)     # rejected by moderator``
+    ``gatekeeper.unmoderated(qs_or_obj)  # instances not managed by gatekeeper``
     
+The filter methods take take one parameter which may be either an instance of QuerySet or an instance of Model.
+
+
+QuerySets
+.........
+
+When passed an instance of QuerySet, the filter methods return a new QuerySet containing only moderated objects of the specified state.
+
+    >>> qs = MyModel.objects.filter(creator=request.user)
+    >>> my_models = gatekeeper.approved(qs)
+
+
+Model Instances
+...............
+
+When passed an instance of Model, the filter methods return the same instance if it is of the specified status or None if the status does not match. Since the filter methods return None when the object state does not match, they can be used in boolean expressions.
+
+    >>> obj = MyModel.objects.get(pk=obj_id)
+    >>> if gatekeeper.approved(obj):
+    ...     pass
+
+
+Deletion of Moderated Objects
+-----------------------------
+
+When a moderated object instance is deleted, the associated ModeratedObject instance is deleted as well.
+
 
 Advanced Usage
 ==============
@@ -113,6 +142,14 @@ By default, moderated model instances will be marked as pending and placed on th
     * 0 - mark objects as pending and place on the moderation queue
     * 1 - mark objects as approved and bypass the moderation queue
     * -1 - mark objects as rejected and bypass the moderation queue
+
+
+Import Unmoderated Objects
+--------------------------
+
+If gatekeeper is added to an existing application, objects already in the database will not be registered with gatekeeper. You can register existing objects with gatekeeper by passing true to the ``import_unmoderated`` parameter of the registration method. The imported objects will be set to the state specified by GATEKEEPER_DEFAULT_STATUS in settings.py or pending if GATEKEEPER_DEFAULT_STATUS is not set. 
+
+    >>> gatekeeper.register(MyModel, import_unmoderated=True)
 
 
 Moderation Queue Notifications

@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
-from django.db.models import signals
+from django.db.models import Model, signals
 from django.dispatch import Signal
 from gatekeeper.middleware import get_current_user
 from gatekeeper.models import ModeratedObject
@@ -18,6 +18,11 @@ import datetime
 ENABLE_AUTOMODERATION = getattr(settings, "GATEKEEPER_ENABLE_AUTOMODERATION", False)
 DEFAULT_STATUS = getattr(settings, "GATEKEEPER_DEFAULT_STATUS", 0)
 MODERATOR_LIST = getattr(settings, "GATEKEEPER_MODERATOR_LIST", [])
+
+APPROVED = 1
+PENDING = 0
+REJECTED = -1
+UNMODERATED = None
 
 post_moderation = Signal(providing_args=["instance"])
 
@@ -106,28 +111,46 @@ def delete_handler(sender, **kwargs):
         pass
 
 #
-# filter querysets
+# filter querysets or test objects
 #
 
-def approved(qs):
-    return _by_status(1, qs)
+def approved(qs_or_obj):
+    return _by_status(APPROVED, qs_or_obj)
 
-def pending(qs):
-    return _by_status(0, qs)
+def pending(qs_or_obj):
+    return _by_status(PENDING, qs_or_obj)
 
-def rejected(qs):
-    return _by_status(-1, qs)
+def rejected(qs_or_obj):
+    return _by_status(REJECTED, qs_or_obj)
 
-def unmoderated(qs):
-    return _by_status(None, qs)
+def unmoderated(qs_or_obj):
+    return _by_status(UNMODERATED, qs_or_obj)
 
-def _by_status(status, qs):
-    if hasattr(qs, "model"):
-        ct = ContentType.objects.get_for_model(qs.model)
-        if status:
-            ids = ModeratedObject.objects.filter(content_type=ct, status=status).values_list('object_id', flat=True)
-            qs = qs.filter(pk__in=ids)
-        else:
+def _by_status(status, qs_or_obj):
+    if hasattr(qs_or_obj, "model"):
+        # filter queryset
+        ct = ContentType.objects.get_for_model(qs_or_obj.model)
+        if status is None:
+            # filter unmoderated instances
             ids = ModeratedObject.objects.filter(content_type=ct).values_list('object_id', flat=True)
-            qs = qs.exclude(pk__in=ids)
-    return qs
+            qs = qs_or_obj.exclude(pk__in=ids)
+        else:
+            # filter approved, pending, and rejected instances
+            ids = ModeratedObject.objects.filter(content_type=ct, status=status).values_list('object_id', flat=True)
+            qs = qs_or_obj.filter(pk__in=ids)
+        return qs
+    elif isinstance(qs_or_obj, Model):
+        # filter single model instance
+        ct = ContentType.objects.get_for_model(qs_or_obj.__class__)
+        try:
+            # test for approved, pending, or rejected status
+            mo = ModeratedObject.objects.get(content_type=ct, object_id=qs_or_obj.pk)
+            if mo.status == status:
+                return qs_or_obj
+        except ModeratedObject.DoesNotExist:
+            # test for unmoderated status
+            if status is None:
+                return qs_or_obj
+    else:
+        raise ValueError('object must be a queryset or model instance')
+            
