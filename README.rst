@@ -79,10 +79,10 @@ Filtering Moderated Models
 
 Four filter methods are provided to filter instances by moderation status.
 
-    ``gatekeeper.approved(qs_or_obj)     # approved by moderator``
-    ``gatekeeper.pending(qs_or_obj)      # pending in moderation queue``
-    ``gatekeeper.rejected(qs_or_obj)     # rejected by moderator``
-    ``gatekeeper.unmoderated(qs_or_obj)  # instances not managed by gatekeeper``
+    >>> gatekeeper.approved(qs_or_obj)     # approved by moderator
+    >>> gatekeeper.pending(qs_or_obj)      # pending in moderation queue
+    >>> gatekeeper.rejected(qs_or_obj)     # rejected by moderator
+    >>> gatekeeper.unmoderated(qs_or_obj)  # instances not managed by gatekeeper
     
 The filter methods take take one parameter which may be either an instance of QuerySet or an instance of Model.
 
