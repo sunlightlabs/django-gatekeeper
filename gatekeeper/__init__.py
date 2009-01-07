@@ -19,11 +19,6 @@ ENABLE_AUTOMODERATION = getattr(settings, "GATEKEEPER_ENABLE_AUTOMODERATION", Fa
 DEFAULT_STATUS = getattr(settings, "GATEKEEPER_DEFAULT_STATUS", 0)
 MODERATOR_LIST = getattr(settings, "GATEKEEPER_MODERATOR_LIST", [])
 
-APPROVED = 1
-PENDING = 0
-REJECTED = -1
-UNMODERATED = None
-
 post_moderation = Signal(providing_args=["instance"])
 
 def _get_automod_user():
@@ -115,16 +110,16 @@ def delete_handler(sender, **kwargs):
 #
 
 def approved(qs_or_obj):
-    return _by_status(APPROVED, qs_or_obj)
+    return _by_status(1, qs_or_obj)
 
 def pending(qs_or_obj):
-    return _by_status(PENDING, qs_or_obj)
+    return _by_status(0, qs_or_obj)
 
 def rejected(qs_or_obj):
-    return _by_status(REJECTED, qs_or_obj)
+    return _by_status(-1, qs_or_obj)
 
 def unmoderated(qs_or_obj):
-    return _by_status(UNMODERATED, qs_or_obj)
+    return _by_status(None, qs_or_obj)
 
 def _by_status(status, qs_or_obj):
     if hasattr(qs_or_obj, "model"):

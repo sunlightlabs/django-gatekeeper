@@ -7,9 +7,9 @@ import datetime
 import gatekeeper
 
 STATUS_CHOICES = (
-    (gatekeeper.APPROVED, "Approved"),
-    (gatekeeper.PENDING, "Pending"),
-    (gatekeeper.REJECTED, "Rejected"),
+    (1, "Approved"),
+    (0, "Pending"),
+    (-1, "Rejected"),
 )
 
 class ModeratedObjectManager(models.Manager):
@@ -54,7 +54,7 @@ class ModeratedObject(models.Model):
         gatekeeper.post_moderation.send(sender=ModeratedObject, instance=self)
 
     def approve(self, user):
-        self._moderate(gatekeeper.APPROVED, user)
+        self._moderate(1, user)
 
     def reject(self, user):
-        self._moderate(gatekeeper.REJECTED, user)
+        self._moderate(-1, user)
