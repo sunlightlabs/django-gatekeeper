@@ -28,18 +28,23 @@ def moderate(request):
 @staff_member_required
 def moderate_list(request, app_label=None, model=None):
     
+    flagged_only = int(request.GET.get("flagged_only", 0))
     content_type = request.GET.get("content_type", None)
     if content_type:
         content_type = ContentType.objects.get(pk=content_type)
-    
+
     pending = ModeratedObject.objects.filter(status=0)
     if content_type:
         pending = pending.filter(content_type=content_type)
+
+    if flagged_only:
+        pending = pending.filter(flagged=True)
         
     cts = [ContentType.objects.get_for_model(model) for model in gatekeeper.registered_models]
         
     data = {
         "content_type": content_type,
+        "flagged_only": flagged_only,
         "pending": pending,
         "cts": cts,
     }
