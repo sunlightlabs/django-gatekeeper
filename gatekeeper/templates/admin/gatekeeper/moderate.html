@@ -28,15 +28,21 @@
 									<a href="?content_type={{ ct.pk }}">{{ ct.model }}</a>
 								</li>
 							{% endfor %}
-						</ul>
-					</div>
+                        </ul>
+                        <h3>By flag status</h3>
+                        <ul>
+                            <li {% if flagged_only %}class="selected"{% endif %}<a href="?flagged_only=1">flagged</a></li>
+                            <li {% if not flagged_only %}class="selected"{% endif %}<a href="?flagged_only=0">all</a></li>
+                        </ul>
+                    </div>
 				{% endblock %}
 				{% block result_list %}
 					<table cellspacing="0">
 						<thead>
 							<tr>
 								<th>Moderate</th>
-								<th>Status</th>
+                                <th>Status</th>
+                                <th>Flag?</th>
 								<th>Object Type</th>
 								<th>Object Description</th>
 							</tr>
@@ -46,7 +52,8 @@
 								<tr class="{% cycle 'row1' 'row2' %}">
 									{% with obj.content_type as oct %}
 										<td><input type="checkbox" name="objects" value="{{ obj.pk }}"></td>
-										<td>{{ obj.get_status_display }}</td>
+                                        <td>{{ obj.get_status_display }}</td>
+                                        <td>{{ obj.flagged|yesno }}</td>
 										<td><a href="/admin/{{ oct.app_label }}/{{ oct.model }}/">{{ oct.model }}</a></td>
 										<td><a href="/admin/{{ oct.app_label }}/{{ oct.model }}/{{ obj.pk }}/">{{ obj.content_object }}</a></td>
 									{% endwith %}

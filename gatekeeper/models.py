@@ -16,7 +16,7 @@ STATUS_ON_FLAG = getattr(settings, "GATEKEEPER_STATUS_ON_FLAG", None)
 
 class ModeratedObjectManager(models.Manager):
     
-    def get_for_instance(obj):
+    def get_for_instance(self, obj):
         ct = ContentType.objects.get_for_model(obj.__class__)
         try:
             mo = ModeratedObject.objects.get(content_type=ct, object_id=obj.pk)
@@ -68,7 +68,7 @@ class ModeratedObject(models.Model):
             self.status = STATUS_ON_FLAG
             self.moderated_by = user
             self.moderated_date = self.flagged_date
-            # does not send moderation signal
+            gatekeeper.post_moderation.send(sender=ModeratedObject, instance=self)
         self.save()
         gatekeeper.post_flag.send(sender=ModeratedObject, instance=self)
 

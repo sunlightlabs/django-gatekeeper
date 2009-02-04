@@ -2,7 +2,7 @@ from django.contrib import admin
 from gatekeeper.models import ModeratedObject
 
 class ModeratedObjectAdmin(admin.ModelAdmin):
-    list_filter = ['status','content_type']
+    list_filter = ['status','flagged','content_type']
 
 admin.site.register(ModeratedObject, ModeratedObjectAdmin)
 
