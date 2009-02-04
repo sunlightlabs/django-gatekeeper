@@ -1,5 +1,5 @@
+from django.conf import settings
 from django.db import models
-from django.db.models import signals
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
@@ -11,6 +11,8 @@ STATUS_CHOICES = (
     (0, "Pending"),
     (-1, "Rejected"),
 )
+
+STATUS_ON_FLAG = getattr(settings, "GATEKEEPER_STATUS_ON_FLAG", None)
 
 class ModeratedObjectManager(models.Manager):
     
@@ -32,6 +34,11 @@ class ModeratedObject(models.Model):
     moderated_by = models.ForeignKey(User, blank=True, null=True)
     moderation_date = models.DateTimeField(blank=True, null=True)
 
+    flagged = models.BooleanField(default=False)
+    flagged_by = models.ForeignKey(User, blank=True, null=True,
+                                   related_name='flagged_objects')
+    flagged_date = models.DateTimeField(blank=True, null=True)
+
     content_type = models.ForeignKey(ContentType)
     object_id = models.PositiveIntegerField()
     content_object = generic.GenericForeignKey('content_type', 'object_id')
@@ -52,6 +59,18 @@ class ModeratedObject(models.Model):
         self.moderation_date = datetime.datetime.now()
         self.save()
         gatekeeper.post_moderation.send(sender=ModeratedObject, instance=self)
+
+    def flag(self, user):
+        self.flagged = True
+        self.flagged_by = user
+        self.flagged_date = datetime.datetime.now()
+        if STATUS_ON_FLAG:
+            self.status = STATUS_ON_FLAG
+            self.moderated_by = user
+            self.moderated_date = self.flagged_date
+            # does not send moderation signal
+        self.save()
+        gatekeeper.post_flag.send(sender=ModeratedObject, instance=self)
 
     def approve(self, user):
         self._moderate(1, user)
