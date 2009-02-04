@@ -20,6 +20,7 @@ DEFAULT_STATUS = getattr(settings, "GATEKEEPER_DEFAULT_STATUS", 0)
 MODERATOR_LIST = getattr(settings, "GATEKEEPER_MODERATOR_LIST", [])
 
 post_moderation = Signal(providing_args=["instance"])
+post_flag = Signal(providing_args=["instance"])
 
 def _get_automod_user():
     try:
@@ -148,4 +149,11 @@ def _by_status(status, qs_or_obj):
                 return qs_or_obj
     else:
         raise ValueError('object must be a queryset or model instance')
-            
+
+
+def flagged(qs_or_obj):
+    if hasattr(qs_or_obj, 'model'):
+        # filter queryset
+        ct = ContentType.objects.get_for_model(qs_or_obj.model)
+        flagged_ids = ModeratedObject.objects.filter(content_type=ct, flagged=True).values_list('object_id', flat=True)
+
