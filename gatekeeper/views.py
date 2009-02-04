@@ -33,7 +33,7 @@ def moderate_list(request, app_label=None, model=None):
     if content_type:
         content_type = ContentType.objects.get(pk=content_type)
 
-    pending = ModeratedObject.objects.filter(status=0)
+    pending = ModeratedObject.objects.filter(moderation_status=0)
     if content_type:
         pending = pending.filter(content_type=content_type)
 

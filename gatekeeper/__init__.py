@@ -50,7 +50,7 @@ def register(model, import_unmoderated=False, auto_moderator=None):
                 unmod_objs = unmoderated(model.objects.all())
                 for obj in unmod_objs:
                     mo = ModeratedObject(
-                        status=DEFAULT_STATUS,
+                        moderation_status=DEFAULT_STATUS,
                         content_object=obj,
                         timestamp=datetime.datetime.now())
                     mo.save()
@@ -68,7 +68,7 @@ def save_handler(sender, **kwargs):
         instance = kwargs['instance']
     
         mo = ModeratedObject(
-            status=DEFAULT_STATUS,
+            moderation_status=DEFAULT_STATUS,
             content_object=instance,
             timestamp=datetime.datetime.now())
         mo.save()
@@ -85,7 +85,7 @@ def save_handler(sender, **kwargs):
                 else:
                     mo.reject(_get_automod_user())
         
-            if mo.status == 0: # if status is still pending
+            if mo.moderation_status == 0: # if status is still pending
                 user = get_current_user()
                 if user and user.is_authenticated():
                     if user.is_superuser or user.has_perm('gatekeeper.change_moderatedobject'):
@@ -132,7 +132,7 @@ def _by_status(status, qs_or_obj):
             qs = qs_or_obj.exclude(pk__in=ids)
         else:
             # filter approved, pending, and rejected instances
-            ids = ModeratedObject.objects.filter(content_type=ct, status=status).values_list('object_id', flat=True)
+            ids = ModeratedObject.objects.filter(content_type=ct, moderation_status=status).values_list('object_id', flat=True)
             qs = qs_or_obj.filter(pk__in=ids)
         return qs
     elif isinstance(qs_or_obj, Model):
@@ -141,7 +141,7 @@ def _by_status(status, qs_or_obj):
         try:
             # test for approved, pending, or rejected status
             mo = ModeratedObject.objects.get(content_type=ct, object_id=qs_or_obj.pk)
-            if mo.status == status:
+            if mo.moderation_status == status:
                 return qs_or_obj
         except ModeratedObject.DoesNotExist:
             # test for unmoderated status
