@@ -30,9 +30,9 @@ class ModeratedObject(models.Model):
     
     timestamp = models.DateTimeField(auto_now_add=True, blank=True, null=True)
     
-    status = models.IntegerField(choices=STATUS_CHOICES)
-    moderated_by = models.ForeignKey(User, blank=True, null=True)
-    moderation_date = models.DateTimeField(blank=True, null=True)
+    moderation_status = models.IntegerField(choices=STATUS_CHOICES)
+    moderation_status_by = models.ForeignKey(User, blank=True, null=True)
+    moderation_status_date = models.DateTimeField(blank=True, null=True)
 
     flagged = models.BooleanField(default=False)
     flagged_by = models.ForeignKey(User, blank=True, null=True,
@@ -47,16 +47,17 @@ class ModeratedObject(models.Model):
         ordering = ['timestamp']
     
     def __unicode__(self):
-        return "[%s] %s" % (self.get_status_display(), self.content_object)
+        return "[%s] %s" % (self.get_moderation_status_display(), 
+                            self.content_object)
         
     def get_absolute_url(self):
         if hasattr(self.content_object, "get_absolute_url"):
             return self.content_object.get_absolute_url()
         
     def _moderate(self, status, user):
-        self.status = status
-        self.moderated_by = user
-        self.moderation_date = datetime.datetime.now()
+        self.moderation_status = status
+        self.moderation_status_by = user
+        self.moderation_status_date = datetime.datetime.now()
         self.save()
         gatekeeper.post_moderation.send(sender=ModeratedObject, instance=self)
 
@@ -65,9 +66,9 @@ class ModeratedObject(models.Model):
         self.flagged_by = user
         self.flagged_date = datetime.datetime.now()
         if STATUS_ON_FLAG:
-            self.status = STATUS_ON_FLAG
-            self.moderated_by = user
-            self.moderated_date = self.flagged_date
+            self.moderation_status = STATUS_ON_FLAG
+            self.moderation_status_by = user
+            self.moderation_status_date = self.flagged_date
             gatekeeper.post_moderation.send(sender=ModeratedObject, instance=self)
         self.save()
         gatekeeper.post_flag.send(sender=ModeratedObject, instance=self)
