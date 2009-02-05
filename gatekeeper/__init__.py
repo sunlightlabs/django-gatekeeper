@@ -10,6 +10,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
 from django.db.models import Manager, Model, signals
+from django.db.models.query import QuerySet
 from django.dispatch import Signal
 from gatekeeper.middleware import get_current_user
 from gatekeeper.models import ModeratedObject
@@ -81,26 +82,10 @@ def add_fields(cls, manager_name, status_name, flagged_name,
         else:
             base_manager = Manager
 
-    class GatekeeperManager(base_manager):
-
-        # add moderation_id, status_name, and flagged_name attributes to the query
-        def get_query_set(self):
-            db_table = self.model._meta.db_table
-            pk_name = self.model._meta.pk.attname
-            content_type = ContentType.objects.get_for_model(self.model).id
-            select = {'moderation_id':'%s.id' % GATEKEEPER_TABLE,
-                      status_name:'%s.moderation_status' % GATEKEEPER_TABLE,
-                      flagged_name:'%s.flagged' % GATEKEEPER_TABLE}
-            where = ['content_type_id=%s' % content_type,
-                     '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table, pk_name)]
-            tables=[GATEKEEPER_TABLE]
-            return super(GatekeeperManager, self).get_query_set().extra(
-                select=select, where=where, tables=tables)
-
+    class GatekeeperQuerySet(QuerySet):
         def _by_status(self, field_name, status):
             where_clause = '%s = %%s' % (field_name)
-            return self.get_query_set().extra(where=[where_clause],
-                                              params=[status])
+            return self.extra(where=[where_clause], params=[status])
 
         def approved(self):
             return self._by_status(status_name, APPROVED_STATUS)
@@ -114,8 +99,30 @@ def add_fields(cls, manager_name, status_name, flagged_name,
         def flagged(self):
             return self._by_status(flagged_name, 1)
 
-        def unflagged(self):
+        def not_flagged(self):
             return self._by_status(flagged_name, 0)
+
+    class GatekeeperManager(base_manager):
+
+        # add moderation_id, status_name, and flagged_name attributes to the query
+        def get_query_set(self):
+            # get parameters
+            db_table = self.model._meta.db_table
+            pk_name = self.model._meta.pk.attname
+            content_type = ContentType.objects.get_for_model(self.model).id
+
+            # build extra params
+            select = {'moderation_id':'%s.id' % GATEKEEPER_TABLE,
+                      status_name:'%s.moderation_status' % GATEKEEPER_TABLE,
+                      flagged_name:'%s.flagged' % GATEKEEPER_TABLE}
+            where = ['content_type_id=%s' % content_type,
+                     '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table, pk_name)]
+            tables=[GATEKEEPER_TABLE]
+
+            # create and return queryset
+            q = super(GatekeeperManager, self).get_query_set().extra(
+                select=select, where=where, tables=tables)
+            return GatekeeperQuerySet(self.model, q.query)
 
     def get_moderated_object(self):
         if not hasattr(self, '_moderated_object'):
