@@ -177,7 +177,7 @@ def save_handler(sender, **kwargs):
         if MODERATOR_LIST:
             subject = "[pending-moderation] %s" % instance
             message = "New object pending moderation.\n%s\n%s" % (instance, reverse("gatekeeper_moderate_list"))
-            from_addr = "bounce@sunlightfoundation.com"
+            from_addr = settings.DEFAULT_FROM_EMAIL 
             send_mail(subject, message, from_addr, MODERATOR_LIST, fail_silently=True)
 
 def delete_handler(sender, **kwargs):
@@ -189,46 +189,4 @@ def delete_handler(sender, **kwargs):
     except ModeratedObject.DoesNotExist:
         pass
 
-#
-# filter querysets or test objects
-#
 
-def approved(qs_or_obj):
-    return _by_status(APPROVED_STATUS, qs_or_obj)
-
-def pending(qs_or_obj):
-    return _by_status(PENDING_STATUS, qs_or_obj)
-
-def rejected(qs_or_obj):
-    return _by_status(REJECTED_STATUS, qs_or_obj)
-
-def unmoderated(qs_or_obj):
-    return _by_status(None, qs_or_obj)
-
-def _by_status(status, qs_or_obj):
-    if hasattr(qs_or_obj, "model"):
-        # filter queryset
-        ct = ContentType.objects.get_for_model(qs_or_obj.model)
-        if status is None:
-            # filter unmoderated instances
-            ids = ModeratedObject.objects.filter(content_type=ct).values_list('object_id', flat=True)
-            qs = qs_or_obj.exclude(pk__in=ids)
-        else:
-            # filter approved, pending, and rejected instances
-            ids = ModeratedObject.objects.filter(content_type=ct, moderation_status=status).values_list('object_id', flat=True)
-            qs = qs_or_obj.filter(pk__in=ids)
-        return qs
-    elif isinstance(qs_or_obj, Model):
-        # filter single model instance
-        ct = ContentType.objects.get_for_model(qs_or_obj.__class__)
-        try:
-            # test for approved, pending, or rejected status
-            mo = ModeratedObject.objects.get(content_type=ct, object_id=qs_or_obj.pk)
-            if mo.moderation_status == status:
-                return qs_or_obj
-        except ModeratedObject.DoesNotExist:
-            # test for unmoderated status
-            if status is None:
-                return qs_or_obj
-    else:
-        raise ValueError('object must be a queryset or model instance')
