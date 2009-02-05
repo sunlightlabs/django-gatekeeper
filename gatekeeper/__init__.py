@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
-from django.db.models import Model, signals
+from django.db.models import Manager, Model, signals
 from django.dispatch import Signal
 from gatekeeper.middleware import get_current_user
 from gatekeeper.models import ModeratedObject
@@ -18,6 +18,7 @@ import datetime
 ENABLE_AUTOMODERATION = getattr(settings, "GATEKEEPER_ENABLE_AUTOMODERATION", False)
 DEFAULT_STATUS = getattr(settings, "GATEKEEPER_DEFAULT_STATUS", 0)
 MODERATOR_LIST = getattr(settings, "GATEKEEPER_MODERATOR_LIST", [])
+GATEKEEPER_TABLE = ModeratedObject._meta.db_table
 
 post_moderation = Signal(providing_args=["instance"])
 post_flag = Signal(providing_args=["instance"])
@@ -33,6 +34,7 @@ def _get_automod_user():
         automod_user.save()
         return automod_user
 
+
 #
 # register models with gatekeeper
 #
@@ -40,10 +42,13 @@ def _get_automod_user():
 
 registered_models = {}
 
-def register(model, import_unmoderated=False, auto_moderator=None):
+def register(model, import_unmoderated=False, auto_moderator=None, 
+             manager_name='objects', status_name='moderation_status',
+             flagged_name='flagged'):
     if not model in registered_models:
         signals.post_save.connect(save_handler, sender=model)
         signals.pre_delete.connect(delete_handler, sender=model)
+        add_fields(model, manager_name, status_name, flagged_name)
         registered_models[model] = auto_moderator
         if import_unmoderated:
             try:
@@ -56,7 +61,28 @@ def register(model, import_unmoderated=False, auto_moderator=None):
                     mo.save()
             except:
                 pass
-                
+
+#
+# add special helper fields and custom manager to class
+#
+def add_fields(cls, manager_name, status_name, flagged_name):
+
+    class GatekeeperManager(Manager):
+        def get_query_set(self):
+            db_table = self.model._meta.db_table
+            pk_name = self.model._meta.pk.attname
+            content_type = ContentType.objects.get_for_model(self.model).id
+            select = {'moderation_id':'%s.id' % GATEKEEPER_TABLE,
+                      moderation_status:'%s.moderation_status' % GATEKEEPER_TABLE,
+                      flagged:'%s.flagged' % GATEKEEPER_TABLE}
+            where = ['content_type_id=%s' % content_type,
+                     '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table, pk_name)]
+            tables=[GATEKEEPER_TABLE]
+            return super(GatekeeperManager, self).get_query_set().extra(
+                select=select, where=where, tables=tables)
+
+    cls.add_to_class(manager_name, GatekeeperManager())
+
 #
 # handler for object creation/deletion
 #
