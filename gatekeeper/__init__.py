@@ -73,8 +73,8 @@ def add_fields(cls, manager_name, status_name, flagged_name):
             pk_name = self.model._meta.pk.attname
             content_type = ContentType.objects.get_for_model(self.model).id
             select = {'moderation_id':'%s.id' % GATEKEEPER_TABLE,
-                      moderation_status:'%s.moderation_status' % GATEKEEPER_TABLE,
-                      flagged:'%s.flagged' % GATEKEEPER_TABLE}
+                      status_name:'%s.moderation_status' % GATEKEEPER_TABLE,
+                      flagged_name:'%s.flagged' % GATEKEEPER_TABLE}
             where = ['content_type_id=%s' % content_type,
                      '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table, pk_name)]
             tables=[GATEKEEPER_TABLE]
