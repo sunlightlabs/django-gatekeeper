@@ -44,11 +44,11 @@ registered_models = {}
 
 def register(model, import_unmoderated=False, auto_moderator=None, 
              manager_name='objects', status_name='moderation_status',
-             flagged_name='flagged'):
+             flagged_name='flagged', base_manager=None):
     if not model in registered_models:
         signals.post_save.connect(save_handler, sender=model)
         signals.pre_delete.connect(delete_handler, sender=model)
-        add_fields(model, manager_name, status_name, flagged_name)
+        add_fields(model, manager_name, status_name, flagged_name, base_manager)
         registered_models[model] = auto_moderator
         if import_unmoderated:
             try:
@@ -65,9 +65,19 @@ def register(model, import_unmoderated=False, auto_moderator=None,
 #
 # add special helper fields and custom manager to class
 #
-def add_fields(cls, manager_name, status_name, flagged_name):
+def add_fields(cls, manager_name, status_name, flagged_name,
+               base_manager):
 
-    class GatekeeperManager(Manager):
+    # inherit from manager that is being replaced, fall back on models.Manager
+    if base_manager is None:
+        if hasattr(cls, manager_name):
+            base_manager = getattr(cls, manager_name).__class__
+        else:
+            base_manager = Manager
+
+    class GatekeeperManager(base_manager):
+
+        # add moderation_id, status_name, and flagged_name attributes to the query
         def get_query_set(self):
             db_table = self.model._meta.db_table
             pk_name = self.model._meta.pk.attname
@@ -80,6 +90,26 @@ def add_fields(cls, manager_name, status_name, flagged_name):
             tables=[GATEKEEPER_TABLE]
             return super(GatekeeperManager, self).get_query_set().extra(
                 select=select, where=where, tables=tables)
+
+        def _by_status(self, field_name, status):
+            where_clause = '%s = %%s' % (field_name)
+            return self.get_query_set().extra(where=[where_clause],
+                                              params=[status])
+
+        def approved(self):
+            return self._by_status(status_name, 1)
+
+        def pending(self):
+            return self._by_status(status_name, 0)
+
+        def rejected(self):
+            return self._by_status(status_name, -1)
+
+        def flagged(self):
+            return self._by_status(flagged_name, 1)
+
+        def unflagged(self):
+            return self._by_status(flagged_name, 0)
 
     cls.add_to_class(manager_name, GatekeeperManager())
 
@@ -175,11 +205,3 @@ def _by_status(status, qs_or_obj):
                 return qs_or_obj
     else:
         raise ValueError('object must be a queryset or model instance')
-
-
-def flagged(qs_or_obj):
-    if hasattr(qs_or_obj, 'model'):
-        # filter queryset
-        ct = ContentType.objects.get_for_model(qs_or_obj.model)
-        flagged_ids = ModeratedObject.objects.filter(content_type=ct, flagged=True).values_list('object_id', flat=True)
-
