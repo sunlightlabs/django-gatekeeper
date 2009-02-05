@@ -15,8 +15,12 @@ from gatekeeper.middleware import get_current_user
 from gatekeeper.models import ModeratedObject
 import datetime
 
+REJECTED_STATUS = -1
+PENDING_STATUS  = 0
+APPROVED_STATUS = 1
+
 ENABLE_AUTOMODERATION = getattr(settings, "GATEKEEPER_ENABLE_AUTOMODERATION", False)
-DEFAULT_STATUS = getattr(settings, "GATEKEEPER_DEFAULT_STATUS", 0)
+DEFAULT_STATUS = getattr(settings, "GATEKEEPER_DEFAULT_STATUS", PENDING_STATUS)
 MODERATOR_LIST = getattr(settings, "GATEKEEPER_MODERATOR_LIST", [])
 GATEKEEPER_TABLE = ModeratedObject._meta.db_table
 
@@ -44,11 +48,13 @@ registered_models = {}
 
 def register(model, import_unmoderated=False, auto_moderator=None, 
              manager_name='objects', status_name='moderation_status',
-             flagged_name='flagged', base_manager=None):
+             flagged_name='flagged', moderated_object_name='moderated_object',
+             base_manager=None):
     if not model in registered_models:
         signals.post_save.connect(save_handler, sender=model)
         signals.pre_delete.connect(delete_handler, sender=model)
-        add_fields(model, manager_name, status_name, flagged_name, base_manager)
+        add_fields(model, manager_name, status_name, flagged_name, 
+                   moderated_object_name, base_manager)
         registered_models[model] = auto_moderator
         if import_unmoderated:
             try:
@@ -66,7 +72,7 @@ def register(model, import_unmoderated=False, auto_moderator=None,
 # add special helper fields and custom manager to class
 #
 def add_fields(cls, manager_name, status_name, flagged_name,
-               base_manager):
+               moderated_object_name, base_manager):
 
     # inherit from manager that is being replaced, fall back on models.Manager
     if base_manager is None:
@@ -97,13 +103,13 @@ def add_fields(cls, manager_name, status_name, flagged_name,
                                               params=[status])
 
         def approved(self):
-            return self._by_status(status_name, 1)
+            return self._by_status(status_name, APPROVED_STATUS)
 
         def pending(self):
-            return self._by_status(status_name, 0)
+            return self._by_status(status_name, PENDING_STATUS)
 
         def rejected(self):
-            return self._by_status(status_name, -1)
+            return self._by_status(status_name, REJECTED_STATUS)
 
         def flagged(self):
             return self._by_status(flagged_name, 1)
@@ -111,7 +117,13 @@ def add_fields(cls, manager_name, status_name, flagged_name,
         def unflagged(self):
             return self._by_status(flagged_name, 0)
 
+    def get_moderated_object(self):
+        if not hasattr(self, '_moderated_object'):
+            self._moderated_object = ModeratedObject.objects.get(pk=self.moderation_id)
+        return self._moderated_object
+
     cls.add_to_class(manager_name, GatekeeperManager())
+    cls.add_to_class(moderated_object_name, property(get_moderated_object))
 
 #
 # handler for object creation/deletion
@@ -141,7 +153,7 @@ def save_handler(sender, **kwargs):
                 else:
                     mo.reject(_get_automod_user())
         
-            if mo.moderation_status == 0: # if status is still pending
+            if mo.moderation_status == PENDING_STATUS: # if status is pending
                 user = get_current_user()
                 if user and user.is_authenticated():
                     if user.is_superuser or user.has_perm('gatekeeper.change_moderatedobject'):
@@ -167,13 +179,13 @@ def delete_handler(sender, **kwargs):
 #
 
 def approved(qs_or_obj):
-    return _by_status(1, qs_or_obj)
+    return _by_status(APPROVED_STATUS, qs_or_obj)
 
 def pending(qs_or_obj):
-    return _by_status(0, qs_or_obj)
+    return _by_status(PENDING_STATUS, qs_or_obj)
 
 def rejected(qs_or_obj):
-    return _by_status(-1, qs_or_obj)
+    return _by_status(REJECTED_STATUS, qs_or_obj)
 
 def unmoderated(qs_or_obj):
     return _by_status(None, qs_or_obj)
