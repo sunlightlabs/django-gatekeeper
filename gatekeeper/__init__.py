@@ -10,7 +10,6 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
 from django.db.models import Manager, Model, signals
-from django.db.models.query import QuerySet
 from django.dispatch import Signal
 from gatekeeper.middleware import get_current_user
 from gatekeeper.models import ModeratedObject
@@ -54,6 +53,7 @@ def register(model, import_unmoderated=False, auto_moderator=None,
     if not model in registered_models:
         signals.post_save.connect(save_handler, sender=model)
         signals.pre_delete.connect(delete_handler, sender=model)
+        # pass extra params onto add_fields to define what fields are named
         add_fields(model, manager_name, status_name, flagged_name, 
                    moderated_object_name, base_manager)
         registered_models[model] = auto_moderator
@@ -82,7 +82,12 @@ def add_fields(cls, manager_name, status_name, flagged_name,
         else:
             base_manager = Manager
 
-    class GatekeeperQuerySet(QuerySet):
+    # queryset should inherit from manager's QuerySet
+    base_queryset = base_manager().get_query_set().__class__
+
+    class GatekeeperQuerySet(base_queryset):
+        """ chainable queryset for checking status & flagging """
+
         def _by_status(self, field_name, status):
             where_clause = '%s = %%s' % (field_name)
             return self.extra(where=[where_clause], params=[status])
@@ -103,15 +108,16 @@ def add_fields(cls, manager_name, status_name, flagged_name,
             return self._by_status(flagged_name, 0)
 
     class GatekeeperManager(base_manager):
+        """ custom manager that adds parameters and uses custom QuerySet """
 
         # add moderation_id, status_name, and flagged_name attributes to the query
         def get_query_set(self):
-            # get parameters
+            # parameters to help with generic SQL
             db_table = self.model._meta.db_table
             pk_name = self.model._meta.pk.attname
             content_type = ContentType.objects.get_for_model(self.model).id
 
-            # build extra params
+            # extra params - status, flag, and id of object (for later access)
             select = {'moderation_id':'%s.id' % GATEKEEPER_TABLE,
                       status_name:'%s.moderation_status' % GATEKEEPER_TABLE,
                       flagged_name:'%s.flagged' % GATEKEEPER_TABLE}
@@ -119,18 +125,20 @@ def add_fields(cls, manager_name, status_name, flagged_name,
                      '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table, pk_name)]
             tables=[GATEKEEPER_TABLE]
 
-            # create and return queryset
+            # build extra query then copy model/query to a GatekeeperQuerySet
             q = super(GatekeeperManager, self).get_query_set().extra(
                 select=select, where=where, tables=tables)
             return GatekeeperQuerySet(self.model, q.query)
 
-    def get_moderated_object(self):
+    def _get_moderated_object(self):
+        """ accessor for moderated_object that caches the object """
         if not hasattr(self, '_moderated_object'):
             self._moderated_object = ModeratedObject.objects.get(pk=self.moderation_id)
         return self._moderated_object
 
+    # add custom manager and moderated_object to class
     cls.add_to_class(manager_name, GatekeeperManager())
-    cls.add_to_class(moderated_object_name, property(get_moderated_object))
+    cls.add_to_class(moderated_object_name, property(_get_moderated_object))
 
 #
 # handler for object creation/deletion
