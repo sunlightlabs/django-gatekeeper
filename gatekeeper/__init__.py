@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
-from django.db.models import Manager, Model, signals
+from django.db.models import Manager, signals
 from django.dispatch import Signal
 from gatekeeper.middleware import get_current_user
 from gatekeeper.models import ModeratedObject
@@ -59,7 +59,8 @@ def register(model, import_unmoderated=False, auto_moderator=None,
         registered_models[model] = auto_moderator
         if import_unmoderated:
             try:
-                unmod_objs = unmoderated(model.objects.all())
+                mod_obj_ids = model.objects.all().values_list('pk', flat=True)
+                unmod_objs = model.objects.exclude(pk__in=mod_obj_ids)
                 for obj in unmod_objs:
                     mo = ModeratedObject(
                         moderation_status=DEFAULT_STATUS,
@@ -118,11 +119,12 @@ def add_fields(cls, manager_name, status_name, flagged_name,
             content_type = ContentType.objects.get_for_model(self.model).id
 
             # extra params - status, flag, and id of object (for later access)
-            select = {'moderation_id':'%s.id' % GATEKEEPER_TABLE,
-                      status_name:'%s.moderation_status' % GATEKEEPER_TABLE,
-                      flagged_name:'%s.flagged' % GATEKEEPER_TABLE}
+            select = {'_moderation_id':'%s.id' % GATEKEEPER_TABLE,
+                      '_moderation_status':'%s.moderation_status' % GATEKEEPER_TABLE,
+                      '_flagged':'%s.flagged' % GATEKEEPER_TABLE}
             where = ['content_type_id=%s' % content_type,
-                     '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table, pk_name)]
+                     '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table, 
+                                             pk_name)]
             tables=[GATEKEEPER_TABLE]
 
             # build extra query then copy model/query to a GatekeeperQuerySet
@@ -133,12 +135,14 @@ def add_fields(cls, manager_name, status_name, flagged_name,
     def _get_moderation_object(self):
         """ accessor for moderated_object that caches the object """
         if not hasattr(self, '_moderation_object'):
-            self._moderation_object = ModeratedObject.objects.get(pk=self.moderation_id)
+            self._moderation_object = ModeratedObject.objects.get(pk=self._moderation_id)
         return self._moderation_object
 
     # add custom manager and moderated_object to class
     cls.add_to_class(manager_name, GatekeeperManager())
     cls.add_to_class(moderation_object_name, property(_get_moderation_object))
+    cls.add_to_class(status_name, property(lambda self: self._moderation_status))
+    cls.add_to_class(flagged_name, property(lambda self: self._flagged))
 
 #
 # handler for object creation/deletion
