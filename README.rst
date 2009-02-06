@@ -65,6 +65,8 @@ Register Models
     ...     pass
     >>> gatekeeper.register(MyModel)
 
+``gatekeeper.register`` optionally takes some extra parameters for advanced configuration, see `advanced register options`_ for details.
+
 
 Admin Moderation Queue
 ----------------------
@@ -74,36 +76,35 @@ Include the following in urls.py BEFORE the default admin:
     ``url(r'^admin/gatekeeper/', include('gatekeeper.urls')),``
 
 
-Filtering Moderated Models
+Accessing Moderated Models
 --------------------------
 
-Four filter methods are provided to filter instances by moderation status.
+Models registered with ``gatekeeper.register`` are given a custom manager that adds several extra fields.  (As documented in `advanced register options`_ all of these fields can be renamed via special parameters to ``gatekeeper.register`` but for simplicity they will be referred to by their default names throughout this document.)
 
-    >>> gatekeeper.approved(qs_or_obj)     # approved by moderator
-    >>> gatekeeper.pending(qs_or_obj)      # pending in moderation queue
-    >>> gatekeeper.rejected(qs_or_obj)     # rejected by moderator
-    >>> gatekeeper.unmoderated(qs_or_obj)  # instances not managed by gatekeeper
-    
-The filter methods take take one parameter which may be either an instance of QuerySet or an instance of Model.
+Model Instance Convenience Fields
+.................................
 
+Every model instance accessed via the custom manager ('objects' by default) has a few extra read-only fields tacked on:
 
-QuerySets
-.........
+* moderation_status - current moderation status (APPROVED_STATUS, PENDING_STATUS, or REJECTED_STATUS)
+* flagged - flag status (True or False)
 
-When passed an instance of QuerySet, the filter methods return a new QuerySet containing only moderated objects of the specified state.
+In addition, ``moderation_object`` is provided as a shortcut to access the actual ``ModeratedObject`` instance.  The first access of this attribute incurs a database hit but the instance is then cached for the object lifetime.
 
-    >>> qs = MyModel.objects.filter(creator=request.user)
-    >>> my_models = gatekeeper.approved(qs)
+GatekeeperQuerySet
+..................
 
+The custom manager returns a special GatekeeperQuerySet with a few extra filters:
 
-Model Instances
-...............
+    >>> MyModel.objects.all().approved()     # approved by moderator
+    >>> MyModel.objects.all().pending()      # pending in moderation queue
+    >>> MyModel.objects.all().rejected()     # rejected by moderator
+    >>> MyModel.objects.all().flagged()      # flagged 
+    >>> MyModel.objects.all().not_flagged()  # not flagged
 
-When passed an instance of Model, the filter methods return the same instance if it is of the specified status or None if the status does not match. Since the filter methods return None when the object state does not match, they can be used in boolean expressions.
+These are implemented on the `GatekeeperQuerySet` itself so that they can be chained:
 
-    >>> obj = MyModel.objects.get(pk=obj_id)
-    >>> if gatekeeper.approved(obj):
-    ...     pass
+    >>> MyModel.objects.filter(spam=eggs).rejected().flagged()
 
 
 Deletion of Moderated Objects
@@ -139,10 +140,14 @@ Default Moderation
 
 By default, moderated model instances will be marked as pending and placed on the moderation queue when created. This behavior can be overridden by specifying GATEKEEPER_DEFAULT_STATUS in settings.py.
 
-    * 0 - mark objects as pending and place on the moderation queue
-    * 1 - mark objects as approved and bypass the moderation queue
-    * -1 - mark objects as rejected and bypass the moderation queue
+    * ``gatekeeper.PENDING_STATUS`` - mark objects as pending and place on the moderation queue
+    * ``gatekeeper.APPROVED_STATUS`` - mark objects as approved and bypass the moderation queue
+    * ``gatekeeper.PENDING_STATUS`` - mark objects as rejected and bypass the moderation queue
 
+Moderation On Flagging
+----------------------
+
+Flagging is provided as a simple mechanism to allow for users to flag content generally for further review.  By default flagging an object does not change it's moderation status, but GATEKEEPER_STATUS_ON_FLAG is available toalter this behavior.  If GATEKEEPER_STATUS_ON_FLAG is set to one of the status constants (see `Default Moderation`_) the given status will be set for an object when ``ModeratedObject.flag`` is called.
 
 Import Unmoderated Objects
 --------------------------
@@ -166,3 +171,19 @@ Post-moderation Signal
 Many applications will want to execute certain tasks once an object is moderated. Gatekeeper provides a signal that is fired when an object is manually or automatically moderated.
 
     ``gatekeeper.post_moderation``
+
+Advanced Register Options
+-------------------------
+
+``gatekeeper.register`` takes a few optional parameters:
+
+manager_name:
+    name of manager to add/replace on model (defaults to objects)
+status_name:
+    name of moderation status field to add to model instances (defaults to ``moderation_status``)
+flagged_name:
+    name of flagged field to add to model instances (defaults to ``flagged``)
+moderation_object_name:
+    name of moderation_object accessor to add to model instances (defaults to ``moderation_object``)
+base_manager:
+    Manager for contributed manager placed at ``manager_name`` to inherit from.  Default behavior is to attempt to inherit from same class as the manager already in place or fall back to ``models.Manager`` if no manager exists.
