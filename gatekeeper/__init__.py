@@ -48,14 +48,14 @@ registered_models = {}
 
 def register(model, import_unmoderated=False, auto_moderator=None, 
              manager_name='objects', status_name='moderation_status',
-             flagged_name='flagged', moderated_object_name='moderated_object',
+             flagged_name='flagged', moderation_object_name='moderation_object',
              base_manager=None):
     if not model in registered_models:
         signals.post_save.connect(save_handler, sender=model)
         signals.pre_delete.connect(delete_handler, sender=model)
         # pass extra params onto add_fields to define what fields are named
         add_fields(model, manager_name, status_name, flagged_name, 
-                   moderated_object_name, base_manager)
+                   moderation_object_name, base_manager)
         registered_models[model] = auto_moderator
         if import_unmoderated:
             try:
@@ -73,7 +73,7 @@ def register(model, import_unmoderated=False, auto_moderator=None,
 # add special helper fields and custom manager to class
 #
 def add_fields(cls, manager_name, status_name, flagged_name,
-               moderated_object_name, base_manager):
+               moderation_object_name, base_manager):
 
     # inherit from manager that is being replaced, fall back on models.Manager
     if base_manager is None:
@@ -130,15 +130,15 @@ def add_fields(cls, manager_name, status_name, flagged_name,
                 select=select, where=where, tables=tables)
             return GatekeeperQuerySet(self.model, q.query)
 
-    def _get_moderated_object(self):
+    def _get_moderation_object(self):
         """ accessor for moderated_object that caches the object """
-        if not hasattr(self, '_moderated_object'):
-            self._moderated_object = ModeratedObject.objects.get(pk=self.moderation_id)
-        return self._moderated_object
+        if not hasattr(self, '_moderation_object'):
+            self._moderation_object = ModeratedObject.objects.get(pk=self.moderation_id)
+        return self._moderation_object
 
     # add custom manager and moderated_object to class
     cls.add_to_class(manager_name, GatekeeperManager())
-    cls.add_to_class(moderated_object_name, property(_get_moderated_object))
+    cls.add_to_class(moderation_object_name, property(_get_moderation_object))
 
 #
 # handler for object creation/deletion
