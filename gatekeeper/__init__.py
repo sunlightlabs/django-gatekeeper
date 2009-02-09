@@ -60,7 +60,8 @@ def register(model, import_unmoderated=False, auto_moderator=None,
         if import_unmoderated:
             try:
                 mod_obj_ids = model.objects.all().values_list('pk', flat=True)
-                unmod_objs = model.objects.exclude(pk__in=mod_obj_ids)
+                unmod_objs = model._default_manager.exclude(pk__in=mod_obj_ids)
+                print 'importing %s unmoderated objects...' % unmod_objs.count()
                 for obj in unmod_objs:
                     mo = ModeratedObject(
                         moderation_status=DEFAULT_STATUS,
