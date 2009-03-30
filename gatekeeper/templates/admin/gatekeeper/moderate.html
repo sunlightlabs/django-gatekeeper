@@ -55,7 +55,7 @@
                                         <td>{{ obj.get_moderation_status_display }}</td>
                                         <td>{{ obj.flagged|yesno }}</td>
 										<td><a href="/admin/{{ oct.app_label }}/{{ oct.model }}/">{{ oct.model }}</a></td>
-										<td><a href="/admin/{{ oct.app_label }}/{{ oct.model }}/{{ obj.pk }}/">{{ obj.content_object }}</a></td>
+										<td><a href="/admin/{{ oct.app_label }}/{{ oct.model }}/{{ obj.object_id }}/">{{ obj.content_object }}</a></td>
 									{% endwith %}
 								</tr>
 							{% endfor %}
