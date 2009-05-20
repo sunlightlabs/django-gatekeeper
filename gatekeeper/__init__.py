@@ -112,6 +112,12 @@ def add_fields(cls, manager_name, status_name, flagged_name,
     class GatekeeperManager(base_manager):
         """ custom manager that adds parameters and uses custom QuerySet """
 
+        # use_for_related_fields is read when the model class is prepared
+        # because GatekeeperManager isn't set on the class at the time
+        # this really has no effect, but is set to True because we are going
+        # to hijack cls._default_manager later
+        use_for_related_fields = True
+
         # add moderation_id, status_name, and flagged_name attributes to the query
         def get_query_set(self):
             # parameters to help with generic SQL
@@ -140,10 +146,15 @@ def add_fields(cls, manager_name, status_name, flagged_name,
         return self._moderation_object
 
     # add custom manager and moderated_object to class
-    cls.add_to_class(manager_name, GatekeeperManager())
+    manager = GatekeeperManager()
+    cls.add_to_class(manager_name, manager)
     cls.add_to_class(moderation_object_name, property(_get_moderation_object))
     cls.add_to_class(status_name, property(lambda self: self._moderation_status))
     cls.add_to_class(flagged_name, property(lambda self: self._flagged))
+
+    # copy manager to _default_class, just like if use_for_related_fields had
+    # been set before the class_prepared signal was sent
+    cls._default_manager = manager
 
 #
 # handler for object creation/deletion
