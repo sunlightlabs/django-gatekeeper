@@ -46,7 +46,7 @@ def _get_automod_user():
 
 registered_models = {}
 
-def register(model, import_unmoderated=False, auto_moderator=None, 
+def register(model, import_unmoderated=False, auto_moderator=None, long_desc=None,
              manager_name='objects', status_name='moderation_status',
              flagged_name='flagged', moderation_object_name='moderation_object',
              base_manager=None):
@@ -56,7 +56,10 @@ def register(model, import_unmoderated=False, auto_moderator=None,
         # pass extra params onto add_fields to define what fields are named
         add_fields(model, manager_name, status_name, flagged_name, 
                    moderation_object_name, base_manager)
-        registered_models[model] = auto_moderator
+        registered_models[model] = {
+            'auto_moderator': auto_moderator,
+            'long_desc': long_desc or lambda x: x.__unicode__(),
+        }
         if import_unmoderated:
             try:
                 mod_obj_ids = model.objects.all().values_list('pk', flat=True)
@@ -174,7 +177,7 @@ def save_handler(sender, **kwargs):
     
         if ENABLE_AUTOMODERATION:
         
-            auto_moderator = registered_models[instance.__class__]
+            auto_moderator = registered_models[instance.__class__]['auto_moderator']
             if auto_moderator:
                 mod = auto_moderator(mo)
                 if mod is None:
@@ -191,9 +194,13 @@ def save_handler(sender, **kwargs):
                         mo.approve(user)
                     
         if MODERATOR_LIST:
+            
+            long_desc = registered_models[instance.__class__]['long_desc']
+            
             subject = "[pending-moderation] %s" % instance
-            message = "New object pending moderation.\n%s\n%s" % (instance, reverse("gatekeeper_moderate_list"))
-            from_addr = settings.DEFAULT_FROM_EMAIL 
+            message = "New object pending moderation.\n%s\n%s" % (long_desc(instance), reverse("gatekeeper_moderate_list"))
+            from_addr = settings.DEFAULT_FROM_EMAIL
+            
             send_mail(subject, message, from_addr, MODERATOR_LIST, fail_silently=True)
 
 def delete_handler(sender, **kwargs):
