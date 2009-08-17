@@ -129,7 +129,7 @@ def add_fields(cls, manager_name, status_name, flagged_name,
             select = {'_moderation_id':'%s.id' % GATEKEEPER_TABLE,
                       '_moderation_status':'%s.moderation_status' % GATEKEEPER_TABLE,
                       '_flagged':'%s.flagged' % GATEKEEPER_TABLE}
-            where = ['content_type_id=%s' % content_type,
+            where = ['%s.content_type_id=%s' % (GATEKEEPER_TABLE, content_type),
                      '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table, 
                                              pk_name)]
             tables=[GATEKEEPER_TABLE]
