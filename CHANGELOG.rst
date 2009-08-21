@@ -2,6 +2,13 @@
 Changelog for django-gatekeeper
 ===============================
 
+0.2.1
+=====
+
+* use GatekeeperManager for related access
+* BUGFIX: wrong id for link in moderation list
+* BUGFIX: fix GH #1, SQL error in trying to moderate objects with a generic fk
+
 0.2.0
 =====
 * addition of flagging

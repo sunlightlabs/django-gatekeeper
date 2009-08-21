@@ -1,6 +1,6 @@
 
 __author__ = "Jeremy Carbaugh (jcarbaugh@sunlightfoundation.com)"
-__version__ = "0.1"
+__version__ = "0.2.1"
 __copyright__ = "Copyright (c) 2008 Sunlight Labs"
 __license__ = "BSD"
 
