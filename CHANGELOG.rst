@@ -2,6 +2,11 @@
 Changelog for django-gatekeeper
 ===============================
 
+0.2.2
+=====
+
+* BUGFIX: import_unmoderated always found 0 objects to import
+
 0.2.1
 =====
 
