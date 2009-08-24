@@ -90,6 +90,9 @@ def add_fields(cls, manager_name, status_name, flagged_name,
     class GatekeeperQuerySet(base_queryset):
         """ chainable queryset for checking status & flagging """
 
+        # attribute to check for to see if we're using gatekeeper
+        _gatekeeper = True
+
         def _by_status(self, field_name, status):
             where_clause = '%s = %%s' % (field_name)
             return self.extra(where=[where_clause], params=[status])
