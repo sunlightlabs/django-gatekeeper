@@ -5,6 +5,8 @@ Changelog for django-gatekeeper
 0.2.2
 =====
 
+* add _gatekeeper attribute on GatekeeperQuerySet (for third party apps)
+* BUGFIX: flag queries failing on postgres due to cast
 * BUGFIX: import_unmoderated always found 0 objects to import
 
 0.2.1

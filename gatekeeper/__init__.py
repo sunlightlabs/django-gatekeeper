@@ -1,7 +1,7 @@
 
 __author__ = "Jeremy Carbaugh (jcarbaugh@sunlightfoundation.com)"
-__version__ = "0.2.1"
-__copyright__ = "Copyright (c) 2008 Sunlight Labs"
+__version__ = "0.2.2"
+__copyright__ = "Copyright (c) 2009 Sunlight Labs"
 __license__ = "BSD"
 
 from django.conf import settings
