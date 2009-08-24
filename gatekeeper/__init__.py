@@ -104,10 +104,10 @@ def add_fields(cls, manager_name, status_name, flagged_name,
             return self._by_status(status_name, REJECTED_STATUS)
 
         def flagged(self):
-            return self._by_status(flagged_name, 1)
+            return self._by_status(flagged_name, True)
 
         def not_flagged(self):
-            return self._by_status(flagged_name, 0)
+            return self._by_status(flagged_name, False)
 
     class GatekeeperManager(base_manager):
         """ custom manager that adds parameters and uses custom QuerySet """
