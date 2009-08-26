@@ -2,6 +2,12 @@
 Changelog for django-gatekeeper
 ===============================
 
+0.3.0
+=====
+
+* added a moderation_reason field
+* always use auto_moderator if set, ignoring GATEKEEPER_ENABLE_AUTOMODERATION
+
 0.2.2
 =====
 

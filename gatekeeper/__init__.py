@@ -1,6 +1,6 @@
 
 __author__ = "Jeremy Carbaugh (jcarbaugh@sunlightfoundation.com)"
-__version__ = "0.2.2"
+__version__ = "0.3.0-dev"
 __copyright__ = "Copyright (c) 2009 Sunlight Labs"
 __license__ = "BSD"
 
@@ -174,19 +174,20 @@ def save_handler(sender, **kwargs):
             content_object=instance,
             timestamp=datetime.datetime.now())
         mo.save()
-    
+
+        # do automoderation
+        auto_moderator = registered_models[instance.__class__]
+        if auto_moderator:
+            mod = auto_moderator(mo)
+            if mod is None:
+                pass # ignore the moderator if it returns None
+            elif mod:
+                mo.approve(_get_automod_user())
+            else:
+                mo.reject(_get_automod_user())
+
         if ENABLE_AUTOMODERATION:
-        
-            auto_moderator = registered_models[instance.__class__]
-            if auto_moderator:
-                mod = auto_moderator(mo)
-                if mod is None:
-                    pass # ignore the moderator if it returns None
-                elif mod:
-                    mo.approve(_get_automod_user())
-                else:
-                    mo.reject(_get_automod_user())
-        
+
             if mo.moderation_status == PENDING_STATUS: # if status is pending
                 user = get_current_user()
                 if user and user.is_authenticated():
