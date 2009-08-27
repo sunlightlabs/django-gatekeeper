@@ -1,7 +1,7 @@
 
 __author__ = "Jeremy Carbaugh (jcarbaugh@sunlightfoundation.com)"
-__version__ = "0.1"
-__copyright__ = "Copyright (c) 2008 Sunlight Labs"
+__version__ = "0.3.0-dev"
+__copyright__ = "Copyright (c) 2009 Sunlight Labs"
 __license__ = "BSD"
 
 from django.conf import settings
@@ -63,7 +63,7 @@ def register(model, import_unmoderated=False, auto_moderator=None, long_desc=Non
         if import_unmoderated:
             try:
                 mod_obj_ids = model.objects.all().values_list('pk', flat=True)
-                unmod_objs = model._default_manager.exclude(pk__in=mod_obj_ids)
+                unmod_objs = model._base_manager.exclude(pk__in=mod_obj_ids)
                 print 'importing %s unmoderated objects...' % unmod_objs.count()
                 for obj in unmod_objs:
                     mo = ModeratedObject(
@@ -93,6 +93,9 @@ def add_fields(cls, manager_name, status_name, flagged_name,
     class GatekeeperQuerySet(base_queryset):
         """ chainable queryset for checking status & flagging """
 
+        # attribute to check for to see if we're using gatekeeper
+        _gatekeeper = True
+
         def _by_status(self, field_name, status):
             where_clause = '%s = %%s' % (field_name)
             return self.extra(where=[where_clause], params=[status])
@@ -107,10 +110,10 @@ def add_fields(cls, manager_name, status_name, flagged_name,
             return self._by_status(status_name, REJECTED_STATUS)
 
         def flagged(self):
-            return self._by_status(flagged_name, 1)
+            return self._by_status(flagged_name, True)
 
         def not_flagged(self):
-            return self._by_status(flagged_name, 0)
+            return self._by_status(flagged_name, False)
 
     class GatekeeperManager(base_manager):
         """ custom manager that adds parameters and uses custom QuerySet """
@@ -132,7 +135,7 @@ def add_fields(cls, manager_name, status_name, flagged_name,
             select = {'_moderation_id':'%s.id' % GATEKEEPER_TABLE,
                       '_moderation_status':'%s.moderation_status' % GATEKEEPER_TABLE,
                       '_flagged':'%s.flagged' % GATEKEEPER_TABLE}
-            where = ['content_type_id=%s' % content_type,
+            where = ['%s.content_type_id=%s' % (GATEKEEPER_TABLE, content_type),
                      '%s.object_id=%s.%s' % (GATEKEEPER_TABLE, db_table, 
                                              pk_name)]
             tables=[GATEKEEPER_TABLE]
@@ -174,19 +177,19 @@ def save_handler(sender, **kwargs):
             content_object=instance,
             timestamp=datetime.datetime.now())
         mo.save()
-    
+
+        # do automoderation
+        auto_moderator = registered_models[instance.__class__]
+        if auto_moderator:
+            mod = auto_moderator(mo)
+            if mod is None:
+                pass # ignore the moderator if it returns None
+            elif mod:
+                mo.approve(_get_automod_user())
+            else:
+                mo.reject(_get_automod_user())
+
         if ENABLE_AUTOMODERATION:
-        
-            auto_moderator = registered_models[instance.__class__]['auto_moderator']
-            if auto_moderator:
-                mod = auto_moderator(mo)
-                if mod is None:
-                    pass # ignore the moderator if it returns None
-                elif mod:
-                    mo.approve(_get_automod_user())
-                else:
-                    mo.reject(_get_automod_user())
-        
             if mo.moderation_status == PENDING_STATUS: # if status is pending
                 user = get_current_user()
                 if user and user.is_authenticated():

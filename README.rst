@@ -142,7 +142,7 @@ By default, moderated model instances will be marked as pending and placed on th
 
     * ``gatekeeper.PENDING_STATUS`` - mark objects as pending and place on the moderation queue
     * ``gatekeeper.APPROVED_STATUS`` - mark objects as approved and bypass the moderation queue
-    * ``gatekeeper.PENDING_STATUS`` - mark objects as rejected and bypass the moderation queue
+    * ``gatekeeper.REJECTED_STATUS`` - mark objects as rejected and bypass the moderation queue
 
 Moderation On Flagging
 ----------------------
