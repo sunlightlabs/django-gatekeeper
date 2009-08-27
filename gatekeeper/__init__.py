@@ -38,6 +38,15 @@ def _get_automod_user():
         automod_user.save()
         return automod_user
 
+def _long_desc(obj, long_desc):
+    if callable(long_desc):
+        return long_desc(obj)
+    attr = getattr(obj, long_desc, None)
+    if attr:
+        if callable(attr):
+            return attr(obj)
+        return unicode(attr)
+    return unicode(obj)
 
 #
 # register models with gatekeeper
@@ -45,6 +54,9 @@ def _get_automod_user():
 # 
 
 registered_models = {}
+
+def _default_long_desc(obj):
+    return unicode(obj)
 
 def register(model, import_unmoderated=False, auto_moderator=None, long_desc=None,
              manager_name='objects', status_name='moderation_status',
@@ -58,7 +70,7 @@ def register(model, import_unmoderated=False, auto_moderator=None, long_desc=Non
                    moderation_object_name, base_manager)
         registered_models[model] = {
             'auto_moderator': auto_moderator,
-            'long_desc': long_desc or lambda x: x.__unicode__(),
+            'long_desc': long_desc or _default_long_desc,
         }
         if import_unmoderated:
             try:
@@ -179,7 +191,7 @@ def save_handler(sender, **kwargs):
         mo.save()
 
         # do automoderation
-        auto_moderator = registered_models[instance.__class__]
+        auto_moderator = registered_models[instance.__class__]['auto_moderator']
         if auto_moderator:
             mod = auto_moderator(mo)
             if mod is None:
@@ -198,10 +210,25 @@ def save_handler(sender, **kwargs):
                     
         if MODERATOR_LIST:
             
+            from django.contrib.sites.models import Site
+            domain = Site.objects.get(id=settings.SITE_ID).domain
+            
+            status = mo.get_moderation_status_display()
+            instance_class = instance.__class__.__name__
             long_desc = registered_models[instance.__class__]['long_desc']
             
-            subject = "[pending-moderation] %s" % instance
-            message = "New object pending moderation.\n%s\n%s" % (long_desc(instance), reverse("gatekeeper_moderate_list"))
+            # message
+            message = _long_desc(instance, long_desc)
+            if status == 'Pending':
+                message = "%s\n\nTo moderate, go to http://%s%s" % (message, domain, reverse("gatekeeper_moderate_list"))
+            
+            # subject
+            key = "%s:%s" % (instance_class, status)
+            if mo.moderation_status_by and mo.moderation_status_by.username == 'gatekeeper_automod':
+                key = "%s:auto" % key
+            subject = "[%s] New gatekeeper object on %s" % (key, domain)
+            
+            # sender
             from_addr = settings.DEFAULT_FROM_EMAIL
             
             send_mail(subject, message, from_addr, MODERATOR_LIST, fail_silently=True)

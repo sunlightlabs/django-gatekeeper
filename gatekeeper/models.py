@@ -75,8 +75,8 @@ class ModeratedObject(models.Model):
         self.save()
         gatekeeper.post_flag.send(sender=ModeratedObject, instance=self)
 
-    def approve(self, user, reason=None):
+    def approve(self, user, reason=''):
         self._moderate(1, user, reason)
 
-    def reject(self, user, reason=None):
+    def reject(self, user, reason=''):
         self._moderate(-1, user, reason)

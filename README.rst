@@ -135,6 +135,21 @@ Gatekeeper provides two methods of auto-moderation. First, if the user that save
 If the auto-moderation function returns None or is not specified for a model, the first form of auto-moderation will be attempted.
 
 
+Long Description
+----------------
+
+When registering a model, a long_desc parameter may be specified that is used to render descriptive text about the instance that is being moderated. The long description is used in emails and in the admin interface.
+
+	>>> class Book(models.Model):
+	...     title = models.CharField(max_length=128)
+	...		author = models.CharField(max_length=128)
+	>>> def booklongdesc(obj):
+	...     return u"%s written by %s" % (obj.title, obj.author)
+	>>> gatekeeper.register(MyModel, long_desc=booklongdesc)
+
+The long_desc parameter accepts either a method or a string. If a method is passed, it will be invoked with the object as the only parameter. If a string is used, gatekeeper will first look on the object for a method with the same name, then an attribute if no method is found. If neither are found, or no long_desc parameter is specified, the objects __unicode__() method will be called.
+
+
 Default Moderation
 ------------------
 
