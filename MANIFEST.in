@@ -1,5 +1,4 @@
 include LICENSE
 include README.rst
-include templates
 include *.py
 recursive-include gatekeeper/templates *
