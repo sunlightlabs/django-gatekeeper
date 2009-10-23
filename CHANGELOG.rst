@@ -7,6 +7,7 @@ Changelog for django-gatekeeper
 
 * added a moderation_reason field
 * always use auto_moderator if set, ignoring GATEKEEPER_ENABLE_AUTOMODERATION
+* reformat emails
 
 0.2.2
 =====
