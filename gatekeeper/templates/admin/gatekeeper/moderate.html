@@ -31,8 +31,8 @@
                         </ul>
                         <h3>By flag status</h3>
                         <ul>
-                            <li {% if flagged_only %}class="selected"{% endif %}<a href="?flagged_only=1">flagged</a></li>
-                            <li {% if not flagged_only %}class="selected"{% endif %}<a href="?flagged_only=0">all</a></li>
+                            <li {% if flagged_only %}class="selected"{% endif %}><a href="?flagged_only=1">flagged</a></li>
+                            <li {% if not flagged_only %}class="selected"{% endif %}><a href="?flagged_only=0">all</a></li>
                         </ul>
                     </div>
 				{% endblock %}
