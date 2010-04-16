@@ -2,7 +2,8 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.contenttypes.models import ContentType
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect
-from django.shortcuts import render_to_response
+from django.template import RequestContext
+from django.shortcuts import render_to_response, redirect
 from gatekeeper.models import ModeratedObject
 import datetime
 import gatekeeper
@@ -23,7 +24,7 @@ def moderate(request):
                 elif status == -1:
                     ModeratedObject.objects.get(pk=obj_id).reject(request.user)
 
-    return HttpResponseRedirect(reverse('gatekeeper_moderate_list'))
+    return redirect(reverse('gatekeeper_moderate_list'))
 
 @staff_member_required
 def moderate_list(request, app_label=None, model=None):
@@ -48,5 +49,5 @@ def moderate_list(request, app_label=None, model=None):
         "pending": pending,
         "cts": cts,
     }
-    
-    return render_to_response('admin/gatekeeper/moderate.html', data)
+
+    return render_to_response('admin/gatekeeper/moderate.html', data, context_instance=RequestContext(request))
