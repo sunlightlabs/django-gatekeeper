@@ -51,11 +51,7 @@ Add to MIDDLEWARE_CLASSES:
 
     ``gatekeeper.middleware.GatekeeperMiddleware``
 
-Add to urls.py:
 
-    url(r'^admin/gatekeeper/', include('gatekeeper.urls')),
-    
-    
 Register Models
 ---------------
 
@@ -66,14 +62,6 @@ Register Models
     >>> gatekeeper.register(MyModel)
 
 ``gatekeeper.register`` optionally takes some extra parameters for advanced configuration, see `advanced register options`_ for details.
-
-
-Admin Moderation Queue
-----------------------
-
-Include the following in urls.py BEFORE the default admin:
-
-    ``url(r'^admin/gatekeeper/', include('gatekeeper.urls')),``
 
 
 Accessing Moderated Models
