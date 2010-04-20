@@ -201,13 +201,12 @@ def save_handler(sender, **kwargs):
             else:
                 mo.reject(_get_automod_user())
 
-        if ENABLE_AUTOMODERATION:
-            if mo.moderation_status == PENDING_STATUS: # if status is pending
-                user = get_current_user()
-                if user and user.is_authenticated():
-                    if user.is_superuser or user.has_perm('gatekeeper.change_moderatedobject'):
-                        mo.approve(user)
-                    
+        # do old-style automoderation if automoderator did nothing
+        if ENABLE_AUTOMODERATION and mo.moderation_status == PENDING_STATUS:
+            user = get_current_user()
+            if user and user.has_perm('gatekeeper.change_moderatedobject'):
+                mo.approve(user)
+
         if MODERATOR_LIST:
             
             from django.contrib.sites.models import Site
