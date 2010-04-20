@@ -1,5 +1,5 @@
 __author__ = "Jeremy Carbaugh (jcarbaugh@sunlightfoundation.com)"
-__version__ = "0.4.0"
+__version__ = "0.4.0a"
 __copyright__ = "Copyright (c) 2010 Sunlight Labs"
 __license__ = "BSD"
 
@@ -235,5 +235,3 @@ def delete_handler(sender, instance, **kwargs):
         mo.delete()
     except ModeratedObject.DoesNotExist:
         pass
-
-

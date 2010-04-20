@@ -4,7 +4,7 @@ long_description = open('README.rst').read()
 
 setup(
     name='django-gatekeeper',
-    version="0.4.0",
+    version="0.4.0a",
     package_dir={'gatekeeper': 'gatekeeper'},
     packages=['gatekeeper'],
     description='Django object moderation',
