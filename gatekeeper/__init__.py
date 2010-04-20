@@ -1,7 +1,6 @@
-
 __author__ = "Jeremy Carbaugh (jcarbaugh@sunlightfoundation.com)"
 __version__ = "0.4.0"
-__copyright__ = "Copyright (c) 2009 Sunlight Labs"
+__copyright__ = "Copyright (c) 2010 Sunlight Labs"
 __license__ = "BSD"
 
 from django.conf import settings
@@ -51,7 +50,6 @@ def _long_desc(obj, long_desc):
 #
 # register models with gatekeeper
 #
-# 
 
 registered_models = {}
 
@@ -178,12 +176,10 @@ def add_fields(cls, manager_name, status_name, flagged_name,
 # handler for object creation/deletion
 #
 
-def save_handler(sender, **kwargs):
+def save_handler(sender, instance, **kwargs):
 
     if kwargs.get('created', None):
-    
-        instance = kwargs['instance']
-    
+
         mo = ModeratedObject(
             moderation_status=DEFAULT_STATUS,
             content_object=instance,
@@ -208,32 +204,31 @@ def save_handler(sender, **kwargs):
                 mo.approve(user)
 
         if MODERATOR_LIST:
-            
+
             from django.contrib.sites.models import Site
             domain = Site.objects.get(id=settings.SITE_ID).domain
-            
+
             status = mo.get_moderation_status_display()
             instance_class = instance.__class__.__name__
             long_desc = registered_models[instance.__class__]['long_desc']
-            
+
             # message
             message = _long_desc(instance, long_desc)
             if status == 'Pending':
-                message = "%s\n\nTo moderate, go to http://%s%s" % (message, domain, reverse("gatekeeper_moderate_list"))
-            
+                message += "\n\nTo moderate, go to http://%s/admin/gatekeeper/moderatedobject/?ot=desc&o=2" % (message, domain)
+
             # subject
             key = "%s:%s" % (instance_class, status)
             if mo.moderation_status_by and mo.moderation_status_by.username == 'gatekeeper_automod':
                 key = "%s:auto" % key
             subject = "[%s] New gatekeeper object on %s" % (key, domain)
-            
+
             # sender
             from_addr = settings.DEFAULT_FROM_EMAIL
-            
+
             send_mail(subject, message, from_addr, MODERATOR_LIST, fail_silently=True)
 
-def delete_handler(sender, **kwargs):
-    instance = kwargs['instance']
+def delete_handler(sender, instance, **kwargs):
     try:
         ct = ContentType.objects.get_for_model(sender)
         mo = ModeratedObject.objects.get(content_type=ct, object_id=instance.pk)
