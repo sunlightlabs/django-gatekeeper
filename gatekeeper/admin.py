@@ -10,6 +10,3 @@ class ModeratedObjectAdmin(admin.ModelAdmin):
         return "%s" % obj
 
 admin.site.register(ModeratedObject, ModeratedObjectAdmin)
-
-if not admin.site.index_template:
-    admin.site.index_template = "admin/gatekeeper/index.html"
