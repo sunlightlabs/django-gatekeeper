@@ -6,8 +6,8 @@ Django application for moderation of model instances.
 
 Provides convenience methods and an admin interface for moderating instances of registered Django models.
 
-django-gatekeeper is a project of Sunlight Labs (c) 2008.
-Writen by Jeremy Carbaugh <jcarbaugh@sunlightfoundation.com>
+django-gatekeeper is a project of Sunlight Labs (c) 2010.
+Writen by Jeremy Carbaugh <jcarbaugh@sunlightfoundation.com> and others (see AUTHORS)
 
 All code is under a BSD-style license, see LICENSE for details.
 
@@ -21,36 +21,25 @@ Requirements
 
 python >= 2.4
 
-django >= 1.0
-
-
-Installation
-============
-
-To install run
-
-    ``python setup.py install``
-
-which will install the application into python's site-packages directory.
+django >= 1.1
 
 
 Quick Setup
 ===========
-
 
 settings.py
 -----------
 
 Add to INSTALLED_APPS:
 
-	``gatekeeper``
-	
+    ``gatekeeper``
+
 Be sure to place gatekeeper above any application which contains models that will be moderated.
 
-Add to MIDDLEWARE_CLASSES:
+If you are using old-style automoderation (``GATEKEEPER_ENABLE_AUTOMODERATION``)
+be sure to add GatekeeperMiddleware to MIDDLEWARE_CLASSES:
 
     ``gatekeeper.middleware.GatekeeperMiddleware``
-
 
 Register Models
 ---------------
@@ -108,11 +97,7 @@ Advanced Usage
 Auto-Moderation
 ---------------
 
-It can be hassle to have to manually moderate objects when there is a simple ruleset used to determine how an object will be moderated. In order to use auto-moderation, the following needs to be added to settings.py:
-
-    ``GATEKEEPER_ENABLE_AUTOMODERATION = True``
-
-Gatekeeper provides two methods of auto-moderation. First, if the user that saves a moderated object has permission to moderate that object, it will be automatically approved. This will always happen if GATEKEEPER_ENABLE_AUTOMODERATION is set to true in settings.py. The second form of auto-moderation allows a moderation method to be written. This method should return True to approve, False to reject, or None to pass on for manual moderation. The auto-moderation function is pass as an argument when registering a Model.
+Gatekeeper provides two methods of auto-moderation. The recommended form of auto-moderation allows a moderation method to be written. This method should return True to approve, False to reject, or None to pass on for manual moderation. The auto-moderation function is passed as an argument when registering a Model.
 
     >>> class MyModel(models.Model):
     ...     pass
@@ -120,7 +105,12 @@ Gatekeeper provides two methods of auto-moderation. First, if the user that save
     ...     pass
     >>> gatekeeper.register(MyModel, auto_moderator=myautomod)
 
-If the auto-moderation function returns None or is not specified for a model, the first form of auto-moderation will be attempted.
+If all you want is for users with permission to moderate (``gatekeeper.change_moderatedobject`` permission)
+to have their objects auto-approved set: ``GATEKEEPER_ENABLE_AUTOMODERATION = True`` in settings.py.
+
+If you enable old-style automoderation be sure to enable ``gatekeeper.middleware.GatekeeperMiddleware``
+
+This form of auto-moderation will be attempted if an auto-moderation function returns None or is not specified for a model.
 
 
 Long Description
@@ -128,12 +118,12 @@ Long Description
 
 When registering a model, a long_desc parameter may be specified that is used to render descriptive text about the instance that is being moderated. The long description is used in emails and in the admin interface.
 
-	>>> class Book(models.Model):
-	...     title = models.CharField(max_length=128)
-	...		author = models.CharField(max_length=128)
-	>>> def booklongdesc(obj):
-	...     return u"%s written by %s" % (obj.title, obj.author)
-	>>> gatekeeper.register(MyModel, long_desc=booklongdesc)
+    >>> class Book(models.Model):
+    ...     title = models.CharField(max_length=128)
+    ...     author = models.CharField(max_length=128)
+    >>> def booklongdesc(obj):
+    ...     return u"%s written by %s" % (obj.title, obj.author)
+    >>> gatekeeper.register(MyModel, long_desc=booklongdesc)
 
 The long_desc parameter accepts either a method or a string. If a method is passed, it will be invoked with the object as the only parameter. If a string is used, gatekeeper will first look on the object for a method with the same name, then an attribute if no method is found. If neither are found, or no long_desc parameter is specified, the objects __unicode__() method will be called.
 

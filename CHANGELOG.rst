@@ -2,6 +2,11 @@
 Changelog for django-gatekeeper
 ===============================
 
+0.4.0
+=====
+
+* remove old moderation view in favor of editable admin fields (requires Django 1.1)
+
 0.3.0
 =====
 

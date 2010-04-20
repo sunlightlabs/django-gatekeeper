@@ -1,0 +1,6 @@
+django-gatekeeper authors
+=========================
+
+Jeremy Carbaugh - authored original version
+James Turk - added flagging fields and helper methods
+Aaron Williamson - adapted moderation view to Django 1.1
